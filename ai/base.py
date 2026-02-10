@@ -142,12 +142,7 @@ class Base:
 
         return epochs + 1
 
-    def evaluate(
-        self,
-        model: Model | None = None,
-        loader: DataLoader | None = None,
-        metrics: bool = False,
-    ):
+    def evaluate(self, model: Model | None = None, loader: DataLoader | None = None):
 
         # Use the provided model and loader if given, otherwise use the default ones
         model = model if model is not None else self._model
@@ -207,6 +202,6 @@ class Base:
 
         return (avg_loss, t_loss), (avg_mae, t_mae), mape, predictions, targets
 
-    def test(self, metrics: bool = False):
+    def test(self):
         # Evaluate the model on the test set
-        return self.evaluate(loader=self._test_loader, metrics=metrics)
+        return self.evaluate(loader=self._test_loader)
