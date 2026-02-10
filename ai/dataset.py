@@ -39,13 +39,13 @@ class Loader(Dataset):
             "pont.congÃ.": "bridge_day",
             "holiday": "holiday",
             "jour_semaine": "day_of_week",
-            "Semaine": "week",
-            "Temp": "temperature",
-            "pluie": "rain",
+            # "Semaine": "week",
+            # "Temp": "temperature",
+            # "pluie": "rain",
             "autre": "other",
-            "Greve_nationale": "national_strike",
-            "SNCF": "train_strike",
-            "prof_nationale": "education_strike",
+            # "Greve_nationale": "national_strike",
+            # "SNCF": "train_strike",
+            # "prof_nationale": "education_strike",
             "Total_reservations": "meetings_reservations",
             self._target_col: self._target_col,
         }
@@ -56,13 +56,13 @@ class Loader(Dataset):
             "pont.congÃ.",
             "holiday",
             "jour_semaine",
-            "Semaine",
-            "Temp",
-            "pluie",
+            # "Semaine",
+            # "Temp",
+            # "pluie",
             "autre",
-            "Greve_nationale",
-            "SNCF",
-            "prof_nationale",
+            # "Greve_nationale",
+            # "SNCF",
+            # "prof_nationale",
             "Total_reservations",
         ]
 
@@ -71,6 +71,15 @@ class Loader(Dataset):
 
         # Rename columns for better readability
         df = df.rename(columns=column_mapping)
+
+        # Update the feature columns list with the new column names
+        self._feature_cols = [x for x in df.columns if x != self._target_col]
+
+        # Store the cleaned data in the _data attribute
+        self._data = df
+
+    def encode(self) -> Loader:
+        df = self._data.copy()
 
         # One hot encode the 'day_of_week' column using sklearn
         ohe = self._dof_ohe.fit_transform(df[["day_of_week"]])
@@ -87,13 +96,13 @@ class Loader(Dataset):
         df = pd.concat([df, ohe_df], axis=1)
 
         # Normalize the 'temperature' column
-        df["temperature"] = self._t_sc.fit_transform(df[["temperature"]])
+        # df["temperature"] = self._t_sc.fit_transform(df[["temperature"]])
 
         # Normalize the 'rain' column
-        df["rain"] = self._r_sc.fit_transform(df[["rain"]])
+        # df["rain"] = self._r_sc.fit_transform(df[["rain"]])
 
         # Normalize the 'week' column
-        df["week"] = self._w_sc.fit_transform(df[["week"]])
+        # df["week"] = self._w_sc.fit_transform(df[["week"]])
 
         # Normalize the 'meetings_reservations' column
         df["meetings_reservations"] = self._me_sc.fit_transform(
@@ -103,8 +112,12 @@ class Loader(Dataset):
         # Update the feature columns list with the new column names
         self._feature_cols = [x for x in df.columns if x != self._target_col]
 
-        # Store the cleaned data in the _data attribute
+        print(len(self._feature_cols))
+
+        # Store the encoded data in the _data attribute
         self._data = df
+
+        return self
 
     def __len__(self):
         return len(self._data)
