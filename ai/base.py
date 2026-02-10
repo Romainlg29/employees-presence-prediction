@@ -1,0 +1,206 @@
+import torch
+
+# from ai.gru_model import Model
+# from ai.standard_model import Model
+from ai.lstm_model import Model
+from ai.dataset import Loader
+from torch.utils.data import DataLoader, Subset
+from torch.nn import MSELoss, L1Loss
+from torch.optim import Adam
+from typing import Callable
+
+
+class Base:
+
+    def __init__(
+        self, dataset: Loader, model: Callable[[int], Model], name: str = "BaseModel"
+    ):
+        self._dataset = dataset
+        self._model_callable = model
+        self._name = name
+
+    def prepare(self):
+        # Encode
+        self._dataset.encode()
+
+        # Get the features and targets
+        features, _ = self._dataset.get_features_and_targets()
+
+        # Split the dataset into train, validation, and test sets
+        self._train_loader, self._validation_loader, self._test_loader = (
+            self._dataset.get_loaders(batch_size=32)
+        )
+
+        # Initialize the model
+        self._model = self._model_callable(features.shape[1])
+
+        # Criterion for regression tasks
+        self._criterion = MSELoss()
+
+        # Mean Absolute Error for evaluation
+        self._mae_criterion = L1Loss()
+
+        # Optimizer
+        self._optimizer = Adam(self._model.parameters(), lr=0.001)
+
+        return self
+
+    def fit(self, epochs: int = 100_000):
+
+        # Early stopping parameters
+        best_validation_loss = float("inf")
+        patience = 30
+        current_patience = 0
+
+        # Training loop
+        for epoch in range(epochs):
+
+            self._model.train()
+
+            # Training loss
+            t_loss = 0
+
+            # Iterate over the training data
+            for features, target in self._train_loader:
+
+                # Convert to tensors
+                if isinstance(features, torch.Tensor):
+                    features = features.clone().detach().float()
+
+                else:
+                    features = torch.as_tensor(features, dtype=torch.float32)
+
+                if isinstance(target, torch.Tensor):
+                    target = target.clone().detach().float()
+
+                else:
+                    target = torch.as_tensor(target, dtype=torch.float32)
+
+                # Zero the gradients
+                self._optimizer.zero_grad()
+
+                # Forward pass
+                output = self._model(features)
+
+                # Compute the loss
+                loss = self._criterion(output, target)
+
+                # Backward pass and optimization
+                loss.backward()
+                self._optimizer.step()
+
+                t_loss += loss.item()
+
+            # Evaluate on the training set
+            avg_train_loss = t_loss / len(self._train_loader)
+
+            # Evaluate on the validation set
+            avg_validation_loss, avg_validation_mae, validation_mape, _, _ = (
+                self.evaluate(model=self._model, loader=self._validation_loader)
+            )
+
+            # Save the best model based on validation loss
+            if avg_validation_loss < best_validation_loss:
+
+                # Update the best validation loss
+                best_validation_loss = avg_validation_loss
+
+                # Reset the patience
+                current_patience = 0
+
+                # Save the model state, optimizer state, and metrics
+                torch.save(
+                    {
+                        "epoch": epoch,
+                        "model_state_dict": self._model.state_dict(),
+                        "optimizer_state_dict": self._optimizer.state_dict(),
+                        "train_loss": avg_train_loss,
+                        "validation_loss": avg_validation_loss,
+                        "validation_mae": avg_validation_mae,
+                        "validation_mape": validation_mape,
+                    },
+                    f"{self._name}_best_model.pth",
+                )
+
+            # Increment patience if validation loss did not improve
+            else:
+                current_patience += 1
+
+            # Print metrics
+            print(
+                f"Epoch {epoch+1} | "
+                f"Train Loss: {avg_train_loss:.4f} | "
+                f"Validation Loss: {avg_validation_loss:.4f} | "
+                f"Validation MAE: {avg_validation_mae:.4f} | "
+                f"Validation MAPE: {validation_mape:.2f}% | "
+                f"Best Validation Loss: {best_validation_loss:.4f} | "
+            )
+
+            # Check for early stopping
+            if current_patience >= patience:
+                print(f"\nEarly stopping triggered at epoch {epoch+1}")
+                break
+
+    def evaluate(self, model: Model | None = None, loader: DataLoader | None = None):
+
+        # Use the provided model and loader if given, otherwise use the default ones
+        model = model if model is not None else self._model
+        loader = loader if loader is not None else self._validation_loader
+
+        # Evaluate the model
+        model.eval()
+
+        # Metrics
+        t_loss = 0
+        t_mae = 0
+
+        # Store predictions
+        predictions = []
+        targets = []
+
+        # No gradients
+        with torch.no_grad():
+
+            # Iterate over the validation data
+            for features, target in loader:
+
+                # Convert to tensors
+                if isinstance(features, torch.Tensor):
+                    features = features.clone().detach().float()
+
+                else:
+                    features = torch.as_tensor(features, dtype=torch.float32)
+
+                if isinstance(target, torch.Tensor):
+                    target = target.clone().detach().float()
+
+                else:
+                    target = torch.as_tensor(target, dtype=torch.float32)
+
+                # Forward pass
+                output = model(features)
+
+                # Compute the loss and MAE
+                t_loss += self._criterion(output, target).item()
+                t_mae += self._mae_criterion(output, target).item()
+
+                # Store predictions and targets for MAPE calculation
+                predictions.append(output)
+                targets.append(target)
+
+        # Concatenate all predictions and targets
+        predictions = torch.cat(predictions)
+        targets = torch.cat(targets)
+
+        # Compute the MAPE
+        mape = torch.mean(torch.abs((targets - predictions) / targets)) * 100
+
+        # Average the loss and MAE over the dataset
+        avg_loss = t_loss / len(loader)
+        avg_mae = t_mae / len(loader)
+
+        return avg_loss, avg_mae, mape, predictions, targets
+
+    def test(self):
+        # Evaluate the model on the test set
+        return self.evaluate(loader=self._test_loader)

@@ -1,5 +1,5 @@
 import pandas as pd
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Subset, DataLoader
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 
@@ -118,6 +118,43 @@ class Loader(Dataset):
         self._data = df
 
         return self
+
+    def split(self, sizes: tuple[float, float, float]) -> tuple[Subset, Subset, Subset]:
+        """Split the dataset into train, validation, and test sets based on the provided sizes."""
+
+        # Calculate the number of samples for each split
+        total_size = len(self._data)
+        train_size = int(sizes[0] * total_size)
+        val_size = int(sizes[1] * total_size)
+
+        # Create Subset objects for train, validation, and test sets
+        train_dataset = Subset(self, range(train_size))
+        val_dataset = Subset(self, range(train_size, train_size + val_size))
+        test_dataset = Subset(self, range(train_size + val_size, total_size))
+
+        return train_dataset, val_dataset, test_dataset
+
+    def get_loaders(
+        self,
+        batch_size: int = 32,
+        shuffle: bool = False,
+        sizes: tuple[float, float, float] = (0.7, 0.15, 0.15),
+    ) -> tuple[DataLoader, DataLoader, DataLoader]:
+        """Create DataLoaders for train, validation, and test sets."""
+        train_dataset, val_dataset, test_dataset = self.split(sizes)
+
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=shuffle)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
+
+        return train_loader, val_loader, test_loader
+
+    def get_features_and_targets(self):
+        """Return the features and targets as separate DataFrames."""
+        features = self._data[self._feature_cols]
+        targets = self._data[self._target_col]
+
+        return features, targets
 
     def __len__(self):
         return len(self._data)
