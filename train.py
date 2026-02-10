@@ -17,7 +17,13 @@ if __name__ == "__main__":
     base.prepare()
 
     # Train the model
-    epochs, _, _, _ = base.fit(epochs=250)
+    (
+        epochs,
+        avg_train_loss_arr,
+        avg_validation_loss_arr,
+        avg_validation_mae_arr,
+        validation_mape_arr,
+    ) = base.fit(epochs=250)
     print(f"Training completed in {epochs} epochs.")
 
     # Evaluate on the validation set
@@ -29,9 +35,34 @@ if __name__ == "__main__":
     print(f"  MAPE: {evaluation_mape:.2f}%")
 
     # Evaluate on the test set
-    test_loss, test_mae, test_mape, _, _ = base.test()
+    test_loss, test_mae, test_mape, test_predictions, test_targets = base.test()
 
     print(f"\nFinal Evaluation on Test Set:")
     print(f"  Loss (MSE): {test_loss:.4f}")
     print(f"  MAE: {test_mae:.4f}")
     print(f"  MAPE: {test_mape:.2f}%")
+
+    # Plot the training and validation loss curves
+    base.plot_loss_curve(
+        avg_train_loss_arr,
+        avg_validation_loss_arr,
+        title="LSTM Training Curves",
+    )
+
+    # Plot the validation MAE and MAPE curves
+    base.plot_mean_absolute_error_curve(
+        avg_validation_mae_arr,
+        title="LSTM Validation MAE Curve",
+    )
+
+    base.plot_mean_absolute_percentage_error_curve(
+        validation_mape_arr,
+        title="LSTM Validation MAPE Curve",
+    )
+
+    # Plot the predictions vs actual values for the test set
+    base.plot_predictions(
+        test_predictions,
+        test_targets,
+        title="LSTM Predictions vs Actual Values on Test Set",
+    )

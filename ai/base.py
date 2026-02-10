@@ -1,13 +1,18 @@
-import torch
+from typing import Callable
 
-# from ai.gru_model import Model
-# from ai.standard_model import Model
-from ai.lstm_model import Model
-from ai.dataset import Loader
+import torch
 from torch.utils.data import DataLoader, Subset
 from torch.nn import MSELoss, L1Loss
 from torch.optim import Adam
-from typing import Callable
+
+from ai.dataset import Loader
+from ai.lstm_model import Model
+
+# from ai.gru_model import Model
+# from ai.standard_model import Model
+
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 class Base:
@@ -47,7 +52,7 @@ class Base:
 
     def fit(
         self, epochs: int = 100_000
-    ) -> tuple[int, list[float], list[float], list[float]]:
+    ) -> tuple[int, list[float], list[float], list[float], list[float]]:
 
         # Early stopping parameters
         best_validation_loss = float("inf")
@@ -55,6 +60,7 @@ class Base:
         current_patience = 0
 
         # Store the metrics
+        avg_train_loss_arr = []
         avg_validation_loss_arr = []
         avg_validation_mae_arr = []
         validation_mape_arr = []
@@ -107,6 +113,7 @@ class Base:
             )
 
             # Store the metrics
+            avg_train_loss_arr.append(avg_train_loss)
             avg_validation_loss_arr.append(avg_validation_loss)
             avg_validation_mae_arr.append(avg_validation_mae)
             validation_mape_arr.append(validation_mape)
@@ -150,15 +157,30 @@ class Base:
 
             # Check for early stopping
             if current_patience >= patience:
+
+                # Update the model with the best model state
+                checkpoint = torch.load(f"{self._name}_best_model.pth")
+                self._model.load_state_dict(checkpoint["model_state_dict"])
+                self._optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+                # Return the metrics
                 return (
                     epoch + 1,
+                    avg_train_loss_arr,
                     avg_validation_loss_arr,
                     avg_validation_mae_arr,
                     validation_mape_arr,
                 )
 
+        # Update the model with the best model state after training completes
+        checkpoint = torch.load(f"{self._name}_best_model.pth")
+        self._model.load_state_dict(checkpoint["model_state_dict"])
+        self._optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+        # Return the metrics
         return (
             epochs + 1,
+            avg_train_loss_arr,
             avg_validation_loss_arr,
             avg_validation_mae_arr,
             validation_mape_arr,
@@ -227,3 +249,134 @@ class Base:
     def test(self):
         # Evaluate the model on the test set
         return self.evaluate(loader=self._test_loader)
+
+    def load(self, path: str):
+        # Load the model state, optimizer state, and metrics
+        checkpoint = torch.load(path)
+
+        self._model.load_state_dict(checkpoint["model_state_dict"])
+        self._optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+        return checkpoint
+
+    def plot_predictions(
+        self, predictions, targets, title: str = "Predictions vs Actual Values"
+    ):
+        plt.figure(figsize=(14, 7))
+
+        # Line plot instead of scatter for better readability
+        plt.plot(
+            range(len(targets)),
+            targets,
+            alpha=0.8,
+            label="Actual",
+            color="#2E86AB",
+            linewidth=2,
+            marker="o",
+            markersize=4,
+            markevery=max(1, len(targets) // 50),
+        )
+        plt.plot(
+            range(len(predictions)),
+            predictions,
+            alpha=0.8,
+            label="Predicted",
+            color="#E63946",
+            linewidth=2,
+            marker="s",
+            markersize=4,
+            markevery=max(1, len(predictions) // 50),
+        )
+
+        plt.title(title)
+        plt.xlabel("Sample Index")
+        plt.ylabel("Value")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
+    def plot_loss_curve(
+        self,
+        avg_train_loss_arr,
+        avg_validation_loss_arr,
+        title: str = "Training and Validation Loss Curves",
+    ):
+        # Plot training and validation loss curves
+        plt.figure(figsize=(14, 7))
+
+        plt.plot(
+            avg_train_loss_arr,
+            label="Train Loss",
+            color="#2E86AB",
+            linewidth=2,
+            marker="o",
+            markersize=4,
+            markevery=max(1, len(avg_train_loss_arr) // 50),
+        )
+
+        plt.plot(
+            avg_validation_loss_arr,
+            label="Validation Loss",
+            color="#E63946",
+            linewidth=2,
+            marker="s",
+            markersize=4,
+            markevery=max(1, len(avg_validation_loss_arr) // 50),
+        )
+
+        plt.title(title)
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
+    def plot_mean_absolute_error_curve(
+        self,
+        avg_validation_mae_arr,
+        title: str = "Validation MAE Curve",
+    ):
+        # Plot validation MAE curve
+        plt.figure(figsize=(14, 7))
+
+        plt.plot(
+            avg_validation_mae_arr,
+            label="Validation MAE",
+            color="#E63946",
+            linewidth=2,
+            marker="s",
+            markersize=4,
+            markevery=max(1, len(avg_validation_mae_arr) // 50),
+        )
+
+        plt.title(title)
+        plt.xlabel("Epoch")
+        plt.ylabel("MAE")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
+    def plot_mean_absolute_percentage_error_curve(
+        self,
+        validation_mape_arr,
+        title: str = "Validation MAPE Curve",
+    ):
+        # Plot validation MAPE curve
+        plt.figure(figsize=(14, 7))
+
+        plt.plot(
+            validation_mape_arr,
+            label="Validation MAPE",
+            color="#E63946",
+            linewidth=2,
+            marker="s",
+            markersize=4,
+            markevery=max(1, len(validation_mape_arr) // 50),
+        )
+
+        plt.title(title)
+        plt.xlabel("Epoch")
+        plt.ylabel("MAPE (%)")
+        plt.legend()
+        plt.grid()
+        plt.show()
