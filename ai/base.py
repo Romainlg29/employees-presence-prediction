@@ -95,7 +95,7 @@ class Base:
             avg_train_loss = t_loss / len(self._train_loader)
 
             # Evaluate on the validation set
-            avg_validation_loss, avg_validation_mae, validation_mape, _, _ = (
+            (avg_validation_loss, _), (avg_validation_mae, _), validation_mape, _, _ = (
                 self.evaluate(model=self._model, loader=self._validation_loader)
             )
 
@@ -142,7 +142,12 @@ class Base:
 
         return epochs + 1
 
-    def evaluate(self, model: Model | None = None, loader: DataLoader | None = None):
+    def evaluate(
+        self,
+        model: Model | None = None,
+        loader: DataLoader | None = None,
+        metrics: bool = False,
+    ):
 
         # Use the provided model and loader if given, otherwise use the default ones
         model = model if model is not None else self._model
@@ -152,8 +157,8 @@ class Base:
         model.eval()
 
         # Metrics
-        t_loss = 0
-        t_mae = 0
+        t_loss = []
+        t_mae = []
 
         # Store predictions
         predictions = []
@@ -182,8 +187,8 @@ class Base:
                 output = model(features)
 
                 # Compute the loss and MAE
-                t_loss += self._criterion(output, target).item()
-                t_mae += self._mae_criterion(output, target).item()
+                t_loss.append(self._criterion(output, target).item())
+                t_mae.append(self._mae_criterion(output, target).item())
 
                 # Store predictions and targets for MAPE calculation
                 predictions.append(output)
@@ -197,11 +202,11 @@ class Base:
         mape = torch.mean(torch.abs((targets - predictions) / targets)) * 100
 
         # Average the loss and MAE over the dataset
-        avg_loss = t_loss / len(loader)
-        avg_mae = t_mae / len(loader)
+        avg_loss = sum(t_loss) / len(loader)
+        avg_mae = sum(t_mae) / len(loader)
 
-        return avg_loss, avg_mae, mape, predictions, targets
+        return (avg_loss, t_loss), (avg_mae, t_mae), mape, predictions, targets
 
-    def test(self):
+    def test(self, metrics: bool = False):
         # Evaluate the model on the test set
-        return self.evaluate(loader=self._test_loader)
+        return self.evaluate(loader=self._test_loader, metrics=metrics)

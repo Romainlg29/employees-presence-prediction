@@ -21,7 +21,7 @@ if __name__ == "__main__":
     print(f"Training completed in {epoch} epochs.")
 
     # Evaluate on the validation set
-    evaluation_loss, evaluation_mae, evaluation_mape, _, _ = base.evaluate()
+    (evaluation_loss, _), (evaluation_mae, _), evaluation_mape, _, _ = base.evaluate()
 
     print(f"\nFinal Evaluation on Validation Set:")
     print(f"  Loss (MSE): {evaluation_loss:.4f}")
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     print(f"  MAPE: {evaluation_mape:.2f}%")
 
     # Evaluate on the test set
-    test_loss, test_mae, test_mape, _, _ = base.test()
+    (test_loss, _), (test_mae, _), test_mape, _, _ = base.test()
 
     print(f"\nFinal Evaluation on Test Set:")
     print(f"  Loss (MSE): {test_loss:.4f}")
