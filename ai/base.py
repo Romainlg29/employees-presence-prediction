@@ -45,12 +45,19 @@ class Base:
 
         return self
 
-    def fit(self, epochs: int = 100_000):
+    def fit(
+        self, epochs: int = 100_000
+    ) -> tuple[int, list[float], list[float], list[float]]:
 
         # Early stopping parameters
         best_validation_loss = float("inf")
         patience = 30
         current_patience = 0
+
+        # Store the metrics
+        avg_validation_loss_arr = []
+        avg_validation_mae_arr = []
+        validation_mape_arr = []
 
         # Training loop
         for epoch in range(epochs):
@@ -95,9 +102,14 @@ class Base:
             avg_train_loss = t_loss / len(self._train_loader)
 
             # Evaluate on the validation set
-            (avg_validation_loss, _), (avg_validation_mae, _), validation_mape, _, _ = (
+            avg_validation_loss, avg_validation_mae, validation_mape, _, _ = (
                 self.evaluate(model=self._model, loader=self._validation_loader)
             )
+
+            # Store the metrics
+            avg_validation_loss_arr.append(avg_validation_loss)
+            avg_validation_mae_arr.append(avg_validation_mae)
+            validation_mape_arr.append(validation_mape)
 
             # Save the best model based on validation loss
             if avg_validation_loss < best_validation_loss:
@@ -117,7 +129,7 @@ class Base:
                         "train_loss": avg_train_loss,
                         "validation_loss": avg_validation_loss,
                         "validation_mae": avg_validation_mae,
-                        "validation_mape": validation_mape,
+                        "validation_mape": validation_mape_arr[-1],
                     },
                     f"{self._name}_best_model.pth",
                 )
@@ -138,9 +150,19 @@ class Base:
 
             # Check for early stopping
             if current_patience >= patience:
-                return epoch + 1
+                return (
+                    epoch + 1,
+                    avg_validation_loss_arr,
+                    avg_validation_mae_arr,
+                    validation_mape_arr,
+                )
 
-        return epochs + 1
+        return (
+            epochs + 1,
+            avg_validation_loss_arr,
+            avg_validation_mae_arr,
+            validation_mape_arr,
+        )
 
     def evaluate(self, model: Model | None = None, loader: DataLoader | None = None):
 
@@ -152,8 +174,8 @@ class Base:
         model.eval()
 
         # Metrics
-        t_loss = []
-        t_mae = []
+        t_loss = 0
+        t_mae = 0
 
         # Store predictions
         predictions = []
@@ -182,8 +204,8 @@ class Base:
                 output = model(features)
 
                 # Compute the loss and MAE
-                t_loss.append(self._criterion(output, target).item())
-                t_mae.append(self._mae_criterion(output, target).item())
+                t_loss += self._criterion(output, target).item()
+                t_mae += self._mae_criterion(output, target).item()
 
                 # Store predictions and targets for MAPE calculation
                 predictions.append(output)
@@ -197,10 +219,10 @@ class Base:
         mape = torch.mean(torch.abs((targets - predictions) / targets)) * 100
 
         # Average the loss and MAE over the dataset
-        avg_loss = sum(t_loss) / len(loader)
-        avg_mae = sum(t_mae) / len(loader)
+        avg_loss = t_loss / len(loader)
+        avg_mae = t_mae / len(loader)
 
-        return (avg_loss, t_loss), (avg_mae, t_mae), mape, predictions, targets
+        return avg_loss, avg_mae, mape, predictions, targets
 
     def test(self):
         # Evaluate the model on the test set
