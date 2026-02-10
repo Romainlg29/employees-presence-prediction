@@ -138,8 +138,9 @@ class Base:
 
             # Check for early stopping
             if current_patience >= patience:
-                print(f"\nEarly stopping triggered at epoch {epoch+1}")
-                break
+                return epoch + 1
+
+        return epochs + 1
 
     def evaluate(self, model: Model | None = None, loader: DataLoader | None = None):
 

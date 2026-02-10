@@ -17,7 +17,8 @@ if __name__ == "__main__":
     base.prepare()
 
     # Train the model
-    base.fit(epochs=250)
+    epoch = base.fit(epochs=250)
+    print(f"Training completed in {epoch} epochs.")
 
     # Evaluate on the validation set
     evaluation_loss, evaluation_mae, evaluation_mape, _, _ = base.evaluate()
