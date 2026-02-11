@@ -5,13 +5,14 @@ from ai.dataset import Loader
 
 from ai.lstm_model import Model as LSTMModel
 from ai.gru_model import Model as GRUModel
+from ai.timexer_model import TimeXer
 
 
 class Runner:
     def __init__(
         self,
         path: str,
-        model: Callable[[int], Union[LSTMModel, GRUModel]],
+        model: Callable[[int], Union[LSTMModel, GRUModel, TimeXer]],
         name="Model",
     ):
         self._model = model
