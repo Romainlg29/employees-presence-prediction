@@ -1,68 +1,16 @@
-from ai.base import Base
-from ai.dataset import Loader
+from ai.runner import Runner
 
-# from ai.gru_model import Model
-# from ai.standard_model import Model
-from ai.lstm_model import Model
+from ai.gru_model import Model as GRUModel
+from ai.lstm_model import Model as LSTMModel
 
 if __name__ == "__main__":
 
-    # Load the dataset
-    dataset = Loader("df_venues_processed.csv")
-
-    # Wrapper
-    base = Base(dataset, model=lambda i: Model(i), name="LSTM")
-
-    # Prepare the data and model
-    base.prepare()
-
-    # Train the model
-    (
-        epochs,
-        avg_train_loss_arr,
-        avg_validation_loss_arr,
-        avg_validation_mae_arr,
-        validation_mape_arr,
-    ) = base.fit(epochs=250)
-    print(f"Training completed in {epochs} epochs.")
-
-    # Evaluate on the validation set
-    evaluation_loss, evaluation_mae, evaluation_mape, _, _ = base.evaluate()
-
-    print(f"\nFinal Evaluation on Validation Set:")
-    print(f"  Loss (MSE): {evaluation_loss:.4f}")
-    print(f"  MAE: {evaluation_mae:.4f}")
-    print(f"  MAPE: {evaluation_mape:.2f}%")
-
-    # Evaluate on the test set
-    test_loss, test_mae, test_mape, test_predictions, test_targets = base.test()
-
-    print(f"\nFinal Evaluation on Test Set:")
-    print(f"  Loss (MSE): {test_loss:.4f}")
-    print(f"  MAE: {test_mae:.4f}")
-    print(f"  MAPE: {test_mape:.2f}%")
-
-    # Plot the training and validation loss curves
-    base.plot_loss_curve(
-        avg_train_loss_arr,
-        avg_validation_loss_arr,
-        title="LSTM Training Curves",
+    lstm_runner = Runner(
+        path="df_venues_model.py", model=lambda i: LSTMModel(i), name="LSTM"
     )
+    lstm_runner.run(plot=True)
 
-    # Plot the validation MAE and MAPE curves
-    base.plot_mean_absolute_error_curve(
-        avg_validation_mae_arr,
-        title="LSTM Validation MAE Curve",
+    gru_runner = Runner(
+        path="df_venues_model.py", model=lambda i: GRUModel(i), name="GRU"
     )
-
-    base.plot_mean_absolute_percentage_error_curve(
-        validation_mape_arr,
-        title="LSTM Validation MAPE Curve",
-    )
-
-    # Plot the predictions vs actual values for the test set
-    base.plot_predictions(
-        test_predictions,
-        test_targets,
-        title="LSTM Predictions vs Actual Values on Test Set",
-    )
+    gru_runner.run(plot=True)

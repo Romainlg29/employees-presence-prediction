@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Union
 
 import torch
 from torch.utils.data import DataLoader, Subset
@@ -6,13 +6,13 @@ from torch.nn import MSELoss, L1Loss
 from torch.optim import Adam
 
 from ai.dataset import Loader
-from ai.lstm_model import Model
-
-# from ai.gru_model import Model
-# from ai.standard_model import Model
+from ai.lstm_model import Model as LSTMModel
+from ai.gru_model import Model as GRUModel
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+type Model = Union[LSTMModel, GRUModel]
 
 
 class Base:
