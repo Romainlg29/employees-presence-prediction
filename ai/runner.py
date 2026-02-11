@@ -19,7 +19,7 @@ class Runner:
         self._path = path
         self._name = name
 
-    def run(self, plot: bool = True):
+    def run(self, plot: bool = True) -> tuple:
         # Load the dataset
         dataset = Loader("df_venues_processed.csv")
 
@@ -56,7 +56,8 @@ class Runner:
         print(f"  MAPE: {test_mape:.2f}%")
 
         if not plot:
-            return
+            return (evaluation_loss, evaluation_mae, evaluation_mape), (epochs, avg_train_loss_arr, avg_validation_loss_arr, avg_validation_mae_arr, validation_mape_arr), (test_predictions, test_targets)
+
 
         # Plot the training and validation loss curves
         base.plot_loss_curve(
@@ -82,3 +83,5 @@ class Runner:
             test_targets,
             title=f"{self._name} Predictions vs Actual Values on Test Set",
         )
+
+        return (evaluation_loss, evaluation_mae, evaluation_mape), (test_loss, test_mae, test_mape), (test_predictions, test_targets)
