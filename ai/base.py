@@ -1,7 +1,7 @@
 from typing import Callable, Union
 
 import torch
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 from torch.nn import MSELoss, L1Loss
 from torch.optim import Adam
 
@@ -10,7 +10,6 @@ from ai.lstm_model import Model as LSTMModel
 from ai.gru_model import Model as GRUModel
 from ai.timexer_model import TimeXer
 
-import seaborn as sns
 import matplotlib.pyplot as plt
 
 type Model = Union[LSTMModel, GRUModel, TimeXer]

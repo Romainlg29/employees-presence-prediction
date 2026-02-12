@@ -1,5 +1,5 @@
 import torch
-from torch.nn import Module, Linear, ReLU, Sequential, Dropout, LSTM, GRU
+from torch.nn import Module, Linear, ReLU, Sequential, Dropout, GRU
 
 
 class Model(Module):
