@@ -9,10 +9,11 @@ from ai.dataset import Loader
 from ai.lstm_model import Model as LSTMModel
 from ai.gru_model import Model as GRUModel
 from ai.timexer_model import TimeXer
+from ai.rnn_model import Model as RNNModel
 
 import matplotlib.pyplot as plt
 
-type Model = Union[LSTMModel, GRUModel, TimeXer]
+type Model = Union[RNNModel, LSTMModel, GRUModel, TimeXer]
 
 
 class Base:
